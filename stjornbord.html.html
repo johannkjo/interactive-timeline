@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="is">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stjórnborð fyrir Tímalínu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        .main-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo-container img {
+            max-width: 180px;
+            height: auto;
+        }
+        
+        .page {
+            display: none; /* All pages hidden by default */
+        }
+
+        .page.active {
+            display: block; /* Active page is visible */
+        }
+
+        /* General Button Styles */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 1rem;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background-color: #0066FF;
+            color: #fff;
+            border: 1px solid #0066FF;
+        }
+
+        .btn-primary:hover {
+            background-color: #0052CC;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-secondary {
+            background-color: #fff;
+            color: #0066FF;
+            border: 1px solid #0066FF;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #f0f2f5;
+        }
+        
+        .btn-danger {
+            background-color: #e74c3c;
+            color: #fff;
+            border: 1px solid #e74c3c;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+
+        .form-group input[type="text"],
+        .form-group input[type="date"],
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #0066FF;
+        }
+        
+        .form-group .char-counter {
+            font-size: 0.8rem;
+            color: #777;
+            text-align: right;
+        }
+        
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+        }
+        .checkbox-group input {
+            margin-right: 0.5rem;
+            width: 1.2rem;
+            height: 1.2rem;
+        }
+
+        /* Event List Styles */
+        #event-list-container {
+            border-top: 1px solid #eee;
+            margin-top: 1.5rem;
+        }
+        
+        .event-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .event-item:hover {
+            background-color: #f9f9f9;
+        }
+
+        .event-item-date {
+            font-weight: bold;
+            color: #0066FF;
+        }
+        
+        .event-item-desc {
+            font-weight: bold;
+            color: #333;
+            margin-top: 0.25rem;
+        }
+        
+        .event-item-long-desc {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            white-space: pre-wrap; /* Preserve line breaks */
+            word-break: break-word;
+        }
+        
+        /* Auth section */
+        #auth-container {
+            padding: 1rem;
+            background-color: #f0f2f5;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="logo-container">
+            <img src="https://raw.githubusercontent.com/johannkjo/interactive-timeline/main/Confirmio%20logo.png" alt="Confirmio Logo">
+        </div>
+
+        <div id="auth-container">
+            <p id="auth-status" class="mb-4">Vinsamlegast skráðu þig inn til að geta skrifað og breytt gögnum.</p>
+            <button id="authorize_button" class="btn btn-primary" style="display: none;">Skrá inn með Google</button>
+            <button id="signout_button" class="btn btn-secondary" style="display: none;">Skrá út</button>
+        </div>
+
+        <div id="landing-page" class="page active">
+            <h1 class="text-3xl font-bold text-center mb-8">Stjórnborð</h1>
+            <div class="flex flex-col md:flex-row justify-center gap-4">
+                <button id="go-to-add-btn" class="btn btn-primary">Bæta á tímalínu</button>
+                <button id="go-to-list-btn" class="btn btn-secondary">Skoða / Breyta tímalínu</button>
+            </div>
+        </div>
+
+        <div id="form-page" class="page">
+            <h1 id="form-title" class="text-3xl font-bold mb-6">Bæta við færslu</h1>
+            <form id="event-form">
+                <input type="hidden" id="form-row-index">
+                
+                <div class="form-group">
+                    <label for="date">DATE</label>
+                    <input type="date" id="date" name="date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description (hámark 70 stafir)</label>
+                    <input type="text" id="description" name="description" required maxlength="70">
+                    <div class="char-counter"><span id="description-char-count">0</span> / 70</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="link">Link</label>
+                    <input type="text" id="link" name="link" placeholder="https://example.com">
+                </div>
+
+                <div class="form-group">
+                    <label for="long-description">Long description (hámark 600 stafir)</label>
+                    <textarea id="long-description" name="long-description" rows="5" maxlength="600"></textarea>
+                    <div class="char-counter"><span id="long-description-char-count">0</span> / 600</div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <input type="checkbox" id="big-event" name="big-event">
+                    <label for="big-event">Big Event</label>
+                </div>
+
+                <div class="flex justify-between gap-4 mt-8">
+                    <button type="button" id="back-to-landing-btn" class="btn btn-secondary">Til baka</button>
+                    <div>
+                        <button type="submit" class="btn btn-primary">Vista</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div id="list-page" class="page">
+            <div class="flex justify-between items-center mb-4">
+                 <h1 class="text-3xl font-bold">Allar færslur</h1>
+                 <button id="back-to-landing-from-list-btn" class="btn btn-secondary">Til baka</button>
+            </div>
+            <p>Smelltu á færslu til að breyta henni.</p>
+            <div id="event-list-container">
+                <p>Hleð inn gögnum...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const CLIENT_ID = '427635591782-2pkmuo3ghhck9kks1gcc3rf9uqt3vjf4.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyAOtGwmRqgQmgHidbpIPBKzV2Pf2tq7Q0U';
+        const SPREADSHEET_ID = '1mEOSEfMcYJQ8IOQSiKzq5D1XuYP3pq288fqHTUVDBXw';
+        const RANGE_FOR_READ = 'Sheet1!A2:E';
+        const SHEET_NAME = 'Sheet1';
+        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+
+        // --- DOM Elements ---
+        const pages = {
+            landing: document.getElementById('landing-page'),
+            form: document.getElementById('form-page'),
+            list: document.getElementById('list-page')
+        };
+        const authContainer = document.getElementById('auth-container');
+        const authStatus = document.getElementById('auth-status');
+        const authorizeButton = document.getElementById('authorize_button');
+        const signoutButton = document.getElementById('signout_button');
+        const goToAaddBtn = document.getElementById('go-to-add-btn');
+        const goToListBtn = document.getElementById('go-to-list-btn');
+        const eventForm = document.getElementById('event-form');
+        const formTitle = document.getElementById('form-title');
+        const backToLandingBtn = document.getElementById('back-to-landing-btn');
+        const backToLandingFromListBtn = document.getElementById('back-to-landing-from-list-btn');
+        const eventListContainer = document.getElementById('event-list-container');
+        
+        // Form fields
+        const formRowIndex = document.getElementById('form-row-index');
+        const formDate = document.getElementById('date');
+        const formDescription = document.getElementById('description');
+        const formLink = document.getElementById('link');
+        const formLongDescription = document.getElementById('long-description');
+        const formBigEvent = document.getElementById('big-event');
+        
+        // Character counters
+        const descCharCount = document.getElementById('description-char-count');
+        const longDescCharCount = document.getElementById('long-description-char-count');
+
+
+        // --- PAGE NAVIGATION ---
+        function showPage(pageName) {
+            Object.values(pages).forEach(page => page.classList.remove('active'));
+            pages[pageName].classList.add('active');
+        }
+
+        goToAaddBtn.addEventListener('click', () => {
+            if (!gapi.client.getToken()) {
+                alert("Þú verður að skrá þig inn til að bæta við færslu.");
+                return;
+            }
+            formTitle.textContent = "Bæta við færslu";
+            eventForm.reset();
+            formRowIndex.value = '';
+            updateCharCounters();
+            showPage('form');
+        });
+
+        goToListBtn.addEventListener('click', () => {
+            if (!gapi.client.getToken()) {
+                alert("Þú verður að skrá þig inn til að skoða færslur.");
+                return;
+            }
+            fetchAndDisplayEvents();
+            showPage('list');
+        });
+
+        backToLandingBtn.addEventListener('click', () => showPage('landing'));
+        backToLandingFromListBtn.addEventListener('click', () => showPage('landing'));
+
+        // --- CHARACTER COUNTERS ---
+        function updateCharCounters() {
+            descCharCount.textContent = formDescription.value.length;
+            longDescCharCount.textContent = formLongDescription.value.length;
+        }
+        formDescription.addEventListener('input', updateCharCounters);
+        formLongDescription.addEventListener('input', updateCharCounters);
+
+
+        // --- GOOGLE API AUTHENTICATION ---
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: API_KEY,
+                discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+            });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '', // Callback is set dynamically
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                authContainer.style.display = 'block';
+                authorizeButton.style.display = 'block';
+            }
+        }
+
+        authorizeButton.addEventListener('click', () => handleAuthClick());
+        signoutButton.addEventListener('click', () => handleSignoutClick());
+
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw (resp);
+                }
+                authStatus.textContent = 'Þú ert skráð/ur inn.';
+                authorizeButton.style.display = 'none';
+                signoutButton.style.display = 'block';
+            };
+            
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            }
+        }
+
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                authStatus.textContent = 'Vinsamlegast skráðu þig inn til að geta skrifað og breytt gögnum.';
+                authorizeButton.style.display = 'block';
+                signoutButton.style.display = 'none';
+            }
+        }
+
+        // --- DATA FETCHING (LIST PAGE) ---
+        async function fetchAndDisplayEvents() {
+            eventListContainer.innerHTML = '<p>Hleð inn gögnum...</p>';
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: RANGE_FOR_READ,
+                });
+                
+                const values = response.result.values || [];
+                if (values.length === 0) {
+                    eventListContainer.innerHTML = '<p>Engar færslur fundust.</p>';
+                    return;
+                }
+
+                const events = values.map((row, index) => ({
+                    rowNumber: index + 2,
+                    date: row[0] || '',
+                    description: row[1] || '',
+                    link: row[2] || '',
+                    longDescription: row[3] || '',
+                    isBigEvent: (row[4] || '').toLowerCase() === 'x'
+                })).sort((a, b) => new Date(a.date) - new Date(b.date));
+                
+                renderEventList(events);
+
+            } catch (err) {
+                console.error(err);
+                eventListContainer.innerHTML = `<p class="text-red-500">Villa kom upp við að sækja gögn: ${err.result.error.message}</p>`;
+            }
+        }
+        
+        function renderEventList(events) {
+            eventListContainer.innerHTML = ''; 
+            events.forEach(event => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'event-item';
+                
+                const displayDate = event.date ? new Date(event.date).toLocaleDateString('is-IS') : 'Engin dagsetning';
+
+                itemDiv.innerHTML = `
+                    <div class="event-item-date">${displayDate}</div>
+                    <div class="event-item-desc">${event.description || '(Engin lýsing)'}</div>
+                    <p class="event-item-long-desc">${event.longDescription || ''}</p>
+                `;
+                
+                itemDiv.addEventListener('click', () => {
+                    populateFormForEdit(event);
+                });
+                
+                eventListContainer.appendChild(itemDiv);
+            });
+        }
+        
+        function populateFormForEdit(event) {
+            formTitle.textContent = "Breyta færslu";
+            
+            const dateObj = new Date(event.date);
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const day = String(dateObj.getDate()).padStart(2, '0');
+
+            formRowIndex.value = event.rowNumber;
+            formDate.value = `${year}-${month}-${day}`;
+            formDescription.value = event.description;
+            formLink.value = event.link;
+            formLongDescription.value = event.longDescription;
+            formBigEvent.checked = event.isBigEvent;
+            
+            updateCharCounters();
+            showPage('form');
+        }
+
+
+        // --- DATA SAVING (FORM SUBMISSION) ---
+        eventForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!gapi.client.getToken()) {
+                alert("Þú verður að vera skráð/ur inn til að vista.");
+                handleAuthClick();
+                return;
+            }
+
+            const rowIndex = formRowIndex.value;
+            const isUpdate = rowIndex !== '';
+
+            const dateParts = formDate.value.split('-'); 
+            const sheetDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`;
+
+            const values = [
+                sheetDate,
+                formDescription.value,
+                formLink.value,
+                formLongDescription.value,
+                formBigEvent.checked ? 'x' : ''
+            ];
+
+            try {
+                if (isUpdate) {
+                    await updateDataInSheet(rowIndex, values);
+                    alert("Færslu hefur verið breytt!");
+                } else {
+                    await appendDataToSheet([values]);
+                    alert("Ný færsla hefur verið vistuð!");
+                }
+                showPage('landing');
+            } catch (err) {
+                console.error("Villa við vistun:", err);
+                alert(`Villa kom upp við að vista gögn: ${err.result.error.message}`);
+            }
+        });
+
+        async function appendDataToSheet(values) {
+            const request = {
+                spreadsheetId: SPREADSHEET_ID,
+                range: SHEET_NAME,
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: values,
+                },
+            };
+            return gapi.client.sheets.spreadsheets.values.append(request);
+        }
+
+        async function updateDataInSheet(rowIndex, values) {
+            const range = `${SHEET_NAME}!A${rowIndex}:E${rowIndex}`;
+            const request = {
+                spreadsheetId: SPREADSHEET_ID,
+                range: range,
+                valueInputOption: 'USER_ENTERED',
+                resource: {
+                    values: [values],
+                },
+            };
+            return gapi.client.sheets.spreadsheets.values.update(request);
+        }
+
+    </script>
+</body>
+</html>
