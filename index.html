@@ -27,15 +27,17 @@
         }
 
         .logo-container img {
-            max-width: 150px; /* Max width for the logo */
+            max-width: 180px; /* Increased max width by 20% */
             height: auto; /* Maintain aspect ratio */
             border-radius: 8px; /* Rounded corners for the logo */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for the logo */
+            display: block; /* Make the image a block element */
+            margin: 0 auto; /* Center horizontally */
         }
 
         .confirmio-display {
             font-size: 20pt; /* Original font size of date display */
-            color: #00008B; /* Dark blue */
+            color: #0066FF; /* Changed to #0066FF */
             font-weight: bold;
             text-align: center;
             margin-top: 20px; /* Space from logo */
@@ -54,9 +56,9 @@
         .filter-buttons button {
             padding: 8px 16px; /* Slightly reduced padding */
             border-radius: 8px;
-            border: 1px solid #00008B;
+            border: 1px solid #0066FF; /* Changed to #0066FF border */
             background-color: #fff;
-            color: #00008B;
+            color: #0066FF; /* Changed to #0066FF text */
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -65,16 +67,16 @@
         }
 
         .filter-buttons button.hover {
-            background-color: #00008B;
+            background-color: #0066FF; /* Changed to #0066FF background */
             color: #fff;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .filter-buttons button.active {
-            background-color: #00008B;
+            background-color: #0066FF; /* Changed to #0066FF background */
             color: #fff;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            border-color: #00008B;
+            border-color: #0066FF; /* Changed to #0066FF border */
         }
 
         .timeline-container {
@@ -98,19 +100,22 @@
             }
         }
 
-        /* Date display moved inside timeline container */
+        /* Date display moved inside timeline container and styled as plain text */
         .date-display {
             position: absolute;
-            top: 20px; /* Position from top of timelineContainer */
-            left: 50%;
-            transform: translateX(-50%);
+            top: 20px; /* Position from top of timelineContainer, fixed at 20px */
+            /* left is set dynamically by JS */
+            transform: translateX(-50%); /* Center horizontally over its dynamic left position */
             font-size: 15pt; /* Reduced by 25% from 20pt */
-            color: #00008B; /* Dark blue */
+            color: #0066FF; /* Same blue as title/buttons */
             white-space: nowrap;
+            opacity: 0;
             transition: opacity 0.3s ease-in-out;
             z-index: 35; /* Above other timeline elements */
             font-weight: bold;
             text-align: center;
+            pointer-events: none; /* Do not block mouse events */
+            /* Removed all box-like styling: background, padding, border-radius, border, box-shadow */
         }
 
         /* This wrapper will dynamically change width for zooming */
@@ -125,8 +130,8 @@
 
         .timeline-line {
             width: 100%; /* Spans the full width of its wrapper */
-            height: 1px; /* Changed from 2px to 1px */
-            background-color: #000;
+            height: 1px;
+            background-color: #0066FF; /* Changed to #0066FF */
             position: absolute;
             top: 50%;
             left: 0; /* Positioned at the beginning of its wrapper */
@@ -149,8 +154,8 @@
 
         /* Adjusted size for small points */
         .event-point.small { 
-            width: 9px; /* Changed from 6px to 9px */
-            height: 9px; /* Changed from 6px to 9px */
+            width: 9px;
+            height: 9px;
         }
 
         .event-point:hover {
@@ -158,22 +163,22 @@
         }
 
         .event-point.past {
-            background-color: #00008B; /* Dark Blue */
+            background-color: #0066FF; /* Changed to #0066FF */
         }
 
         .event-point.future {
-            background-color: #8A2BE2; /* Changed to Dark Violet */
+            background-color: #00008B; /* Changed to Dark Blue (#00008B) */
         }
 
         .event-point.today {
-            background-color: #28a745; /* Green */
+            background-color: #2A9D8F; /* Persian Green */
         }
 
         .today-line {
             position: absolute;
             width: 2px;
             height: 100%; /* Spans the full height of the timeline-content-wrapper */
-            background-color: #28a745; /* Green */
+            background-color: #2A9D8F; /* Persian Green */
             left: 50%; /* Initial position, will be updated by JS */
             top: 0;
             transform: translateX(-50%);
@@ -202,16 +207,29 @@
         }
 
         .tooltip.past-bg {
-            background-color: rgba(0, 0, 139, 0.5); /* Dark Blue with 50% transparency */
+            background-color: rgba(0, 102, 255, 0.5); /* #0066FF with 50% transparency */
         }
 
         .tooltip.future-bg {
-            background-color: rgba(138, 43, 226, 0.5); /* Dark Violet with 50% transparency */
+            background-color: rgba(0, 0, 139, 0.5); /* #00008B with 50% transparency */
         }
 
         .event-point:hover .tooltip {
             opacity: 1;
             transform: translateX(-50%) translateY(0); /* Final position for slide-up animation */
+        }
+
+        .date-display {
+            /* Now positioned in normal document flow */
+            font-size: 20pt;
+            color: #00008B; /* Dark blue */
+            white-space: nowrap;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 30; /* Still a high z-index, but less critical */
+            font-weight: bold;
+            text-align: center; /* Center the text */
+            margin-top: 50px; /* Space from top of body */
+            margin-bottom: 20px; /* Space above filter buttons */
         }
 
         .zoom-indicator {
@@ -234,11 +252,11 @@
             .timeline-container {
                 width: 95%;
                 margin-top: 15px; /* Adjusted margin */
-                min-height: 180px; /* Adjusted min-height */
+                min-height: 220px; /* Adjusted min-height */
             }
 
             .timeline-content-wrapper {
-                height: 100px; /* Adjusted height */
+                height: 120px; /* Adjusted height */
             }
 
             .event-point {
@@ -259,6 +277,7 @@
             .date-display {
                 font-size: 14pt; /* Responsive font size */
                 top: 15px; /* Responsive top position */
+                padding: 6px 10px; /* Adjusted padding */
             }
 
             .zoom-indicator {
@@ -277,11 +296,11 @@
             .timeline-container {
                 width: 98%;
                 margin-top: 10px; /* Adjusted margin */
-                min-height: 150px; /* Adjusted min-height */
+                min-height: 180px; /* Adjusted min-height */
             }
 
             .timeline-content-wrapper {
-                height: 80px; /* Adjusted height */
+                height: 100px; /* Adjusted height */
             }
 
             .event-point {
@@ -302,6 +321,7 @@
             .date-display {
                 font-size: 12pt; /* Smaller responsive font size */
                 top: 10px; /* Smaller responsive top position */
+                padding: 4px 8px; /* Adjusted padding */
             }
 
             .filter-buttons button {
@@ -320,15 +340,15 @@
 </head>
 <body>
     <div class="logo-container">
-        <!-- Placeholder for your logo. Replace src with your actual logo URL. -->
-        <img src="https://placehold.co/150x50/B0C4DE/00008B?text=Your+Logo" alt="Company Logo">
+        <!-- Replace src with your actual logo URL from GitHub raw content -->
+        <img src="https://raw.githubusercontent.com/johannkjo/interactive-timeline/main/Confirmio%20logo.png" alt="Confirmio Logo">
     </div>
 
-    <!-- New Confirmio text display -->
-    <div id="confirmioDisplay" class="confirmio-display">Confirmio</div>
+    <!-- New "Interactive Timeline" text display -->
+    <div id="confirmioDisplay" class="confirmio-display">Interactive Timeline</div>
 
     <div id="timelineContainer" class="timeline-container w-full relative p-8">
-        <!-- Date Display is now inside the timeline container -->
+        <!-- Date Display is now inside the timeline container and styled as plain text -->
         <div id="dateDisplay" class="date-display opacity-0">Hover over an event</div>
         
         <div id="timelineContentWrapper" class="timeline-content-wrapper">
@@ -364,7 +384,7 @@
         
         const filterAllBtn = document.getElementById('filterAll');
         const filterPastYearBtn = document.getElementById('filterPastYear');
-        const filterNextYearBtn = document.getElementById('filterNextYear');
+        const filterNextYearBtn = document.getElementById('filterNextYear'); 
         const filterPast24MonthsBtn = document.getElementById('filterPast24Months'); // New button reference
         const filterNext24MonthsBtn = document.getElementById('filterNext24Months'); // New button reference
         const zoomIndicator = document.getElementById('zoomIndicator'); // New zoom indicator element
@@ -588,6 +608,9 @@
                     // Date display gets ONLY the date
                     dateDisplay.textContent = event.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
                     dateDisplay.classList.add('opacity-100');
+                    // Position dateDisplay directly above the event point
+                    const eventPointAbsoluteLeft = eventPoint.offsetLeft; // Left relative to timelineContentWrapper
+                    dateDisplay.style.left = `${20 + eventPointAbsoluteLeft}px`; // Adjust for timelineContainer padding
                 });
                 eventPoint.addEventListener('mouseout', () => {
                     dateDisplay.classList.remove('opacity-100');
@@ -614,6 +637,9 @@
             todayPoint.addEventListener('mouseover', () => {
                 dateDisplay.textContent = 'Today'; // "Today" point always shows "Today"
                 dateDisplay.classList.add('opacity-100');
+                // Position dateDisplay directly above the today point
+                const todayPointAbsoluteLeft = todayPoint.offsetLeft; // Left relative to timelineContentWrapper
+                dateDisplay.style.left = `${20 + todayPointAbsoluteLeft}px`; // Adjust for timelineContainer padding
             });
             todayPoint.addEventListener('mouseout', () => {
                 dateDisplay.classList.remove('opacity-100');
@@ -656,10 +682,17 @@
 
         // Function to activate the clicked button and deactivate others
         function activateButton(activeButton) {
-            [filterAllBtn, filterPastYearBtn, filterNextYearBtn, filterPast24MonthsBtn, filterNext24MonthsBtn].forEach(btn => {
-                btn.classList.remove('active');
+            const allButtons = [filterAllBtn, filterPastYearBtn, filterNextYearBtn, filterPast24MonthsBtn, filterNext24MonthsBtn];
+            allButtons.forEach(btn => {
+                // Ensure the element exists before trying to access its classList
+                if (btn) {
+                    btn.classList.remove('active');
+                }
             });
-            activeButton.classList.add('active');
+            // Ensure the element exists before trying to access its classList
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
         }
 
         // Setup zoom and pan listeners
