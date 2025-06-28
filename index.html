@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Timeline</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for the timeline */
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Montserrat', sans-serif; /* Changed font to Montserrat */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -21,7 +22,7 @@
 
         .logo-container {
             margin-top: 20px; /* Space from top of the page */
-            margin-bottom: 20px; /* Space before date display */
+            margin-bottom: 10px; /* Reduced space before Confirmio display */
             text-align: center;
             width: 100%;
         }
@@ -36,12 +37,14 @@
         }
 
         .confirmio-display {
-            font-size: 20pt; /* Original font size of date display */
+            font-size: 18pt; /* Slightly reduced font size to fit better */
             color: #0066FF; /* Changed to #0066FF */
             font-weight: bold;
             text-align: center;
-            margin-top: 20px; /* Space from logo */
+            margin-top: 10px; /* Reduced space from logo */
             margin-bottom: 20px; /* Space before date display */
+            max-width: 180px; /* Constrain width to logo width */
+            line-height: 1.2; /* Adjust line height if it wraps */
         }
 
         .filter-buttons {
@@ -87,7 +90,7 @@
             background-color: #fff;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            min-height: 280px; /* Increased minimum height for date display and tooltips */
+            min-height: 300px; /* Increased minimum height to accommodate date display */
             overflow-x: auto; /* Enable horizontal scrolling */
             overflow-y: visible; /* Ensure vertical overflow is visible for tooltips */
             cursor: grab; /* Default cursor for dragging */
@@ -106,8 +109,8 @@
             top: 20px; /* Position from top of timelineContainer, fixed at 20px */
             /* left is set dynamically by JS */
             transform: translateX(-50%); /* Center horizontally over its dynamic left position */
-            font-size: 15pt; /* Reduced by 25% from 20pt */
-            color: #0066FF; /* Same blue as title/buttons */
+            font-size: 12pt; /* Reduced font size to 12pt */
+            color: #0066FF; /* Changed back to #0066FF for full opacity and better contrast */
             white-space: nowrap;
             opacity: 0;
             transition: opacity 0.3s ease-in-out;
@@ -121,8 +124,8 @@
         /* This wrapper will dynamically change width for zooming */
         .timeline-content-wrapper {
             position: relative;
-            height: 150px; /* Increased height by approx 25% (from 125px) to accommodate date display move */
-            margin-top: 40px; /* Space from inner date-display to timeline line/points */
+            height: 150px; /* Height for the content area, including points and line */
+            margin-top: 50px; /* Increased margin-top from 40px to 50px for more space from date display */
             display: flex; /* Kept flex for vertical centering of line and points within wrapper */
             align-items: center; /* Vertically center items */
             /* width will be set by JS dynamically based on zoom and date range */
@@ -167,7 +170,7 @@
         }
 
         .event-point.future {
-            background-color: #00008B; /* Changed to Dark Blue (#00008B) */
+            background-color: #00008B; /* Dark Blue (#00008B) */
         }
 
         .event-point.today {
@@ -219,19 +222,6 @@
             transform: translateX(-50%) translateY(0); /* Final position for slide-up animation */
         }
 
-        .date-display {
-            /* Now positioned in normal document flow */
-            font-size: 20pt;
-            color: #00008B; /* Dark blue */
-            white-space: nowrap;
-            transition: opacity 0.3s ease-in-out;
-            z-index: 30; /* Still a high z-index, but less critical */
-            font-weight: bold;
-            text-align: center; /* Center the text */
-            margin-top: 50px; /* Space from top of body */
-            margin-bottom: 20px; /* Space above filter buttons */
-        }
-
         .zoom-indicator {
             position: absolute;
             bottom: 10px; /* Position from the bottom of timelineContainer */
@@ -277,7 +267,6 @@
             .date-display {
                 font-size: 14pt; /* Responsive font size */
                 top: 15px; /* Responsive top position */
-                padding: 6px 10px; /* Adjusted padding */
             }
 
             .zoom-indicator {
@@ -321,7 +310,6 @@
             .date-display {
                 font-size: 12pt; /* Smaller responsive font size */
                 top: 10px; /* Smaller responsive top position */
-                padding: 4px 8px; /* Adjusted padding */
             }
 
             .filter-buttons button {
