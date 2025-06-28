@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Timeline</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for the timeline */
+        body {
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden; /* Prevent body horizontal scrolling */
+        }
+
+        .logo-container {
+            margin-top: 20px; /* Space from top of the page */
+            margin-bottom: 20px; /* Space before date display */
+            text-align: center;
+            width: 100%;
+        }
+
+        .logo-container img {
+            max-width: 150px; /* Max width for the logo */
+            height: auto; /* Maintain aspect ratio */
+            border-radius: 8px; /* Rounded corners for the logo */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for the logo */
+        }
+
+        .confirmio-display {
+            font-size: 20pt; /* Original font size of date display */
+            color: #00008B; /* Dark blue */
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px; /* Space from logo */
+            margin-bottom: 20px; /* Space before date display */
+        }
+
+        .filter-buttons {
+            margin-top: 40px; /* Increased margin-top to move buttons further down from timeline */
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            justify-content: center;
+            margin-bottom: 20px; /* Space below buttons (e.g., if there's content after them) */
+        }
+
+        .filter-buttons button {
+            padding: 8px 16px; /* Slightly reduced padding */
+            border-radius: 8px;
+            border: 1px solid #00008B;
+            background-color: #fff;
+            color: #00008B;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-size: 0.9em; /* Slightly reduced font size */
+        }
+
+        .filter-buttons button.hover {
+            background-color: #00008B;
+            color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .filter-buttons button.active {
+            background-color: #00008B;
+            color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            border-color: #00008B;
+        }
+
+        .timeline-container {
+            width: 90%; /* Fluid width for the scrollable viewport */
+            position: relative;
+            margin-top: 0; /* No margin-top here, controlled by confirmio-display */
+            padding: 20px; /* Simplified padding to just define vertical space and horizontal buffer */
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            min-height: 280px; /* Increased minimum height for date display and tooltips */
+            overflow-x: auto; /* Enable horizontal scrolling */
+            overflow-y: visible; /* Ensure vertical overflow is visible for tooltips */
+            cursor: grab; /* Default cursor for dragging */
+
+            /* Hide scrollbar for Firefox */
+            scrollbar-width: none;
+            /* Hide scrollbar for Webkit browsers (Chrome, Safari) */
+            &::-webkit-scrollbar {
+                display: none;
+            }
+        }
+
+        /* Date display moved inside timeline container */
+        .date-display {
+            position: absolute;
+            top: 20px; /* Position from top of timelineContainer */
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 15pt; /* Reduced by 25% from 20pt */
+            color: #00008B; /* Dark blue */
+            white-space: nowrap;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 35; /* Above other timeline elements */
+            font-weight: bold;
+            text-align: center;
+        }
+
+        /* This wrapper will dynamically change width for zooming */
+        .timeline-content-wrapper {
+            position: relative;
+            height: 150px; /* Increased height by approx 25% (from 125px) to accommodate date display move */
+            margin-top: 40px; /* Space from inner date-display to timeline line/points */
+            display: flex; /* Kept flex for vertical centering of line and points within wrapper */
+            align-items: center; /* Vertically center items */
+            /* width will be set by JS dynamically based on zoom and date range */
+        }
+
+        .timeline-line {
+            width: 100%; /* Spans the full width of its wrapper */
+            height: 1px; /* Changed from 2px to 1px */
+            background-color: #000;
+            position: absolute;
+            top: 50%;
+            left: 0; /* Positioned at the beginning of its wrapper */
+            transform: translateY(-50%);
+            border-radius: 0.5px;
+        }
+
+        .event-point {
+            width: 12px; /* Default size for big events */
+            height: 12px; /* Default size for big events */
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease-in-out, width 0.2s ease-in-out, height 0.2s ease-in-out; /* Added width and height to transition */
+            z-index: 10; /* Ensure points are above the line */
+        }
+
+        /* Adjusted size for small points */
+        .event-point.small { 
+            width: 9px; /* Changed from 6px to 9px */
+            height: 9px; /* Changed from 6px to 9px */
+        }
+
+        .event-point:hover {
+            transform: translate(-50%, -50%) scale(1.3); /* Enlarge on hover */
+        }
+
+        .event-point.past {
+            background-color: #00008B; /* Dark Blue */
+        }
+
+        .event-point.future {
+            background-color: #8A2BE2; /* Changed to Dark Violet */
+        }
+
+        .event-point.today {
+            background-color: #28a745; /* Green */
+        }
+
+        .today-line {
+            position: absolute;
+            width: 2px;
+            height: 100%; /* Spans the full height of the timeline-content-wrapper */
+            background-color: #28a745; /* Green */
+            left: 50%; /* Initial position, will be updated by JS */
+            top: 0;
+            transform: translateX(-50%);
+            z-index: 5; /* Below points, above line */
+            opacity: 0.5; /* Slightly transparent */
+            transition: opacity 0.3s ease;
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(51, 51, 51, 0.5); /* 50% transparent background */
+            color: #fff;
+            padding: 6px 10px; /* Reduced padding for smaller size */
+            border-radius: 8px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none; /* Tooltip doesn't block mouse events on the point */
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+            z-index: 20;
+            font-size: 0.85em; /* Slightly reduced font size */
+            /* Positioned relative to the event-point's bottom */
+            top: calc(100% + 10px); /* 10px below the bottom of the event-point */
+            left: 50%;
+            transform: translateX(-50%) translateY(0px); /* Initial state for slide-up animation */
+            border: 1px solid #000; /* Black border */
+        }
+
+        .tooltip.past-bg {
+            background-color: rgba(0, 0, 139, 0.5); /* Dark Blue with 50% transparency */
+        }
+
+        .tooltip.future-bg {
+            background-color: rgba(138, 43, 226, 0.5); /* Dark Violet with 50% transparency */
+        }
+
+        .event-point:hover .tooltip {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0); /* Final position for slide-up animation */
+        }
+
+        .zoom-indicator {
+            position: absolute;
+            bottom: 10px; /* Position from the bottom of timelineContainer */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            z-index: 40; /* Ensure it's on top */
+            opacity: 0.9;
+            white-space: nowrap;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .timeline-container {
+                width: 95%;
+                margin-top: 15px; /* Adjusted margin */
+                min-height: 180px; /* Adjusted min-height */
+            }
+
+            .timeline-content-wrapper {
+                height: 100px; /* Adjusted height */
+            }
+
+            .event-point {
+                width: 10px;
+                height: 10px;
+            }
+             .event-point.small {
+                width: 7px; /* Adjusted responsive size for small points */
+                height: 7px;
+            }
+
+            .tooltip {
+                font-size: 0.8em;
+                padding: 6px 10px;
+                top: calc(100% + 8px);
+            }
+
+            .date-display {
+                font-size: 14pt; /* Responsive font size */
+                top: 15px; /* Responsive top position */
+            }
+
+            .zoom-indicator {
+                font-size: 0.7em;
+                padding: 4px 8px;
+                bottom: 8px;
+            }
+
+            .filter-buttons button {
+                padding: 7px 14px;
+                font-size: 0.85em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .timeline-container {
+                width: 98%;
+                margin-top: 10px; /* Adjusted margin */
+                min-height: 150px; /* Adjusted min-height */
+            }
+
+            .timeline-content-wrapper {
+                height: 80px; /* Adjusted height */
+            }
+
+            .event-point {
+                width: 8px;
+                height: 8px;
+            }
+            .event-point.small {
+                width: 5px; /* Adjusted responsive size for small points */
+                height: 5px;
+            }
+
+            .tooltip {
+                font-size: 0.7em;
+                padding: 4px 8px;
+                top: calc(100% + 6px);
+            }
+
+            .date-display {
+                font-size: 12pt; /* Smaller responsive font size */
+                top: 10px; /* Smaller responsive top position */
+            }
+
+            .filter-buttons button {
+                padding: 6px 12px;
+                font-size: 0.8em;
+            }
+
+            .zoom-indicator {
+                font-size: 0.6em;
+                padding: 3px 6px;
+                bottom: 6px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <!-- Placeholder for your logo. Replace src with your actual logo URL. -->
+        <img src="https://placehold.co/150x50/B0C4DE/00008B?text=Your+Logo" alt="Company Logo">
+    </div>
+
+    <!-- New Confirmio text display -->
+    <div id="confirmioDisplay" class="confirmio-display">Confirmio</div>
+
+    <div id="timelineContainer" class="timeline-container w-full relative p-8">
+        <!-- Date Display is now inside the timeline container -->
+        <div id="dateDisplay" class="date-display opacity-0">Hover over an event</div>
+        
+        <div id="timelineContentWrapper" class="timeline-content-wrapper">
+            <div class="timeline-line"></div>
+            <!-- Event points will be appended here -->
+            <div id="todayLine" class="today-line"></div>
+        </div>
+        <div id="zoomIndicator" class="zoom-indicator">Scale: N/A</div>
+    </div>
+
+    <div class="filter-buttons">
+        <button id="filterPast24Months">Last 24 Months</button>
+        <button id="filterPastYear">Last 12 Months</button>
+        <button id="filterAll" class="active">All</button>
+        <button id="filterNextYear">Next 12 Months</button>
+        <button id="filterNext24Months">Next 24 Months</button>
+    </div>
+
+    <script type="module">
+        // Constants for Google Sheets API
+        const API_KEY = 'AIzaSyAOtGwmRqgQmgHidbpIPBKzV2Pf2tq7Q0U';
+        const SPREADSHEET_ID = '1mEOSEfMcYJQ8IOQSiKzq5D1XuYP3pq288fqHTUVDBXw';
+        // Updated RANGE to include column E for "Big event"
+        const RANGE = 'Sheet1!A2:E1000'; 
+
+        // Get DOM elements
+        const timelineContainer = document.getElementById('timelineContainer');
+        const timelineContentWrapper = document.getElementById('timelineContentWrapper'); // New wrapper element
+        const dateDisplay = document.getElementById('dateDisplay');
+        const todayLine = document.getElementById('todayLine');
+        // New Confirmio display element
+        const confirmioDisplay = document.getElementById('confirmioDisplay');
+        
+        const filterAllBtn = document.getElementById('filterAll');
+        const filterPastYearBtn = document.getElementById('filterPastYear');
+        const filterNextYearBtn = document.getElementById('filterNextYear');
+        const filterPast24MonthsBtn = document.getElementById('filterPast24Months'); // New button reference
+        const filterNext24MonthsBtn = document.getElementById('filterNext24Months'); // New button reference
+        const zoomIndicator = document.getElementById('zoomIndicator'); // New zoom indicator element
+
+        let allEvents = []; // Store all fetched events
+        let currentFilter = 'all'; // Default filter
+
+        // Variables for zoom and pan
+        let zoomFactor = 1.0; // Initial zoom level (will be calculated to fit on filter changes)
+        const MAX_ZOOM = 1000.0; // Allows very deep zoom in (1000 times reference scale)
+        const ZOOM_STEP = 0.02; // Finer zoom control
+        // Reference for 100% scale in the zoom indicator (5 pixels per day)
+        const REFERENCE_PIXELS_PER_DAY_FOR_100_PERCENT_SCALE = 5; 
+
+        let isDragging = false;
+        let startX;
+        let scrollLeft;
+        let calculatedMinZoom = 0.01; // Initialize with a very low value, will be updated dynamically
+
+
+        // Function to parse MM/DD/YYYY date string to Date object
+        function parseDate(dateString) {
+            const parts = dateString.split('/');
+            // Month is 0-indexed in JavaScript Date, so subtract 1 from month part
+            return new Date(parts[2], parts[0] - 1, parts[1]);
+        }
+
+        // Function to fetch data from Google Sheet
+        async function fetchDataFromGoogleSheet() {
+            // Corrected API URL: removed redundant /sheets/v1/
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${RANGE}?key=${API_KEY}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('Fetched data:', data);
+                if (data.values) {
+                    allEvents = []; // Clear previous events
+                    // Parse dates and extract event details, including isBigEvent status from column E
+                    data.values.forEach(row => {
+                        if (row[0] && row[1]) { // Ensure date and description exist
+                            try {
+                                const eventDate = parseDate(row[0]);
+                                if (!isNaN(eventDate.getTime())) {
+                                    // Check if column E (index 4) has content
+                                    const isBigEvent = row[4] && row[4].trim() !== '';
+                                    allEvents.push({ date: eventDate, description: row[1], isBigEvent: isBigEvent });
+                                }
+                            } catch (e) {
+                                console.warn(`Could not parse date "${row[0]}":`, e);
+                            }
+                        }
+                    });
+                    renderTimeline('initialLoad'); // Initial render
+                } else {
+                    console.warn('No values found in the Google Sheet data.');
+                    dateDisplay.textContent = 'No event data found.';
+                    dateDisplay.classList.add('opacity-100');
+                }
+            } catch (error) {
+                console.error('Error fetching data from Google Sheet:', error);
+                dateDisplay.textContent = 'Failed to load timeline data. Check console for errors.';
+                dateDisplay.classList.add('opacity-100');
+            }
+        }
+
+        // Function to render the timeline based on filter and zoom mode
+        function renderTimeline(mode = 'manualZoom') { // mode can be 'initialLoad', 'filterChange', 'manualZoom'
+            // Clear existing points before rendering new ones
+            // Exclude the todayLine from removal as it's part of the wrapper
+            Array.from(timelineContentWrapper.querySelectorAll('.event-point')).forEach(point => point.remove());
+
+            if (allEvents.length === 0) {
+                dateDisplay.textContent = 'No valid events to display.';
+                dateDisplay.classList.add('opacity-100');
+                todayLine.style.opacity = '0'; // Hide today line if no events
+                timelineContentWrapper.style.width = '100%'; // Reset wrapper width
+                zoomIndicator.textContent = 'Scale: N/A'; // Reset indicator
+                return;
+            }
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize today's date
+
+            let filteredEvents = [...allEvents]; // Start with all events
+
+            // Apply filter based on filterType
+            let effectiveMinDate = new Date(Math.min(...allEvents.map(e => e.date.getTime())));
+            let effectiveMaxDate = new Date(Math.max(...allEvents.map(e => e.date.getTime())));
+
+            if (currentFilter === 'pastYear') {
+                const oneYearAgo = new Date(today);
+                oneYearAgo.setFullYear(today.getFullYear() - 1);
+                filteredEvents = allEvents.filter(event => event.date >= oneYearAgo && event.date <= today);
+                effectiveMinDate = oneYearAgo;
+                effectiveMaxDate = today;
+            } else if (currentFilter === 'nextYear') {
+                const oneYearFromNow = new Date(today);
+                oneYearFromNow.setFullYear(today.getFullYear() + 1);
+                filteredEvents = allEvents.filter(event => event.date >= today && event.date <= oneYearFromNow);
+                effectiveMinDate = today;
+                effectiveMaxDate = oneYearFromNow;
+            } else if (currentFilter === 'past24Months') { // Filter for past 24 months
+                const twoYearsAgo = new Date(today);
+                twoYearsAgo.setFullYear(today.getFullYear() - 2);
+                filteredEvents = allEvents.filter(event => event.date >= twoYearsAgo && event.date <= today);
+                effectiveMinDate = twoYearsAgo;
+                effectiveMaxDate = today;
+            } else if (currentFilter === 'next24Months') { // Filter for next 24 months
+                const twoYearsFromNow = new Date(today);
+                twoYearsFromNow.setFullYear(today.getFullYear() + 2);
+                filteredEvents = allEvents.filter(event => event.date >= today && event.date <= twoYearsFromNow);
+                effectiveMinDate = today;
+                effectiveMaxDate = twoYearsFromNow;
+            }
+            // If 'all', effectiveMinDate and effectiveMaxDate are already set from allEvents
+
+            // Adjust min/max if filteredEvents is empty but allEvents exist, to ensure a visible timeline
+            if (filteredEvents.length === 0 && allEvents.length > 0 && currentFilter !== 'all') {
+                // If no events in filtered range, but there are overall events, show the range as 1 year around today
+                const oneYearAgo = new Date(today);
+                oneYearAgo.setFullYear(today.getFullYear() - 1);
+                const oneYearFromNow = new Date(today);
+                oneYearFromNow.setFullYear(today.getFullYear() + 1);
+                effectiveMinDate = oneYearAgo;
+                effectiveMaxDate = oneYearFromNow;
+                dateDisplay.textContent = `No events in the selected period.`;
+                dateDisplay.classList.add('opacity-100');
+            } else if (filteredEvents.length === 0 && allEvents.length === 0) {
+                // No events at all
+                dateDisplay.textContent = 'No events to display.';
+                dateDisplay.classList.add('opacity-100');
+                return;
+            }
+
+            // Add some padding to the min/max dates for better visualization
+            // Extend the timeline by 10% on each side of the actual event range
+            const dateRangeMs = effectiveMaxDate.getTime() - effectiveMinDate.getTime();
+            const paddingMs = dateRangeMs * 0.1;
+            let timelineStartMs = effectiveMinDate.getTime() - paddingMs;
+            let timelineEndMs = effectiveMaxDate.getTime() + paddingMs;
+
+            let totalTimelineRangeMs = timelineEndMs - timelineStartMs;
+
+            if (totalTimelineRangeMs <= 0) { // Handle case where all events are on the same day or range is invalid
+                console.warn("Total timeline range is zero or negative. Adjusting to a default range around today.");
+                const defaultRange = 365 * 24 * 60 * 60 * 1000; // 1 year in milliseconds
+                timelineStartMs = today.getTime() - defaultRange / 2;
+                timelineEndMs = today.getTime() + defaultRange / 2;
+                totalTimelineRangeMs = timelineEndMs - timelineStartMs;
+            }
+
+            // Calculate the visible width of the timeline container (excluding padding)
+            const visibleContainerWidth = timelineContainer.offsetWidth - (2 * 20); 
+
+            // Calculate the hypothetical width of the timeline at REFERENCE_PIXELS_PER_DAY_FOR_100_PERCENT_SCALE
+            const timelineWidthAtReferenceScale = (totalTimelineRangeMs / (1000 * 60 * 60 * 24)) * REFERENCE_PIXELS_PER_DAY_FOR_100_PERCENT_SCALE;
+
+            // Dynamically calculate the minimum zoom factor to fit all data within the visible container
+            // This is the zoom factor needed for timelineWidthAtReferenceScale * zoomFactor to equal visibleContainerWidth
+            calculatedMinZoom = timelineWidthAtReferenceScale > 0 ? visibleContainerWidth / timelineWidthAtReferenceScale : 1.0;
+            // Ensure calculatedMinZoom is not excessively large or small
+            calculatedMinZoom = Math.max(0.001, calculatedMinZoom); // Lower bound for safety
+
+            if (mode === 'initialLoad' || mode === 'filterChange') {
+                // Set zoomFactor to calculatedMinZoom when loading or changing filters
+                zoomFactor = calculatedMinZoom;
+            }
+            // If mode is 'manualZoom', zoomFactor is already updated by the wheel event handler
+
+            // Set wrapper width based on reference width and current zoomFactor
+            timelineContentWrapper.style.width = `${timelineWidthAtReferenceScale * zoomFactor}px`;
+
+            // Update zoom indicator to show percentage relative to REFERENCE_PIXELS_PER_DAY_FOR_100_PERCENT_SCALE
+            const currentScalePercentage = (zoomFactor * 100).toFixed(0);
+            zoomIndicator.textContent = `Scale: ${currentScalePercentage}%`;
+
+
+            // Render event points for filtered events
+            filteredEvents.forEach(event => {
+                const eventTimeMs = event.date.getTime();
+                // Calculate position as a percentage of the timelineContentWrapper width
+                const positionPercentage = ((eventTimeMs - timelineStartMs) / totalTimelineRangeMs) * 100;
+
+                const eventPoint = document.createElement('div');
+                eventPoint.classList.add('event-point');
+
+                // Apply 'small' class if it's not a big event
+                if (!event.isBigEvent) {
+                    eventPoint.classList.add('small');
+                }
+
+                // Set color based on past, present, future
+                const normalizedEventDate = new Date(event.date);
+                normalizedEventDate.setHours(0, 0, 0, 0); // Normalize event date for comparison
+                if (normalizedEventDate < today) {
+                    eventPoint.classList.add('past');
+                    eventPoint.dataset.type = 'past';
+                } else {
+                    eventPoint.classList.add('future');
+                    eventPoint.dataset.type = 'future';
+                }
+                
+                eventPoint.style.left = `${positionPercentage}%`;
+
+                // Create and append tooltip
+                const tooltip = document.createElement('span');
+                tooltip.classList.add('tooltip');
+                tooltip.textContent = event.description; // Tooltip gets description
+                if (eventPoint.dataset.type === 'past') {
+                    tooltip.classList.add('past-bg');
+                } else {
+                    tooltip.classList.add('future-bg');
+                }
+                eventPoint.appendChild(tooltip);
+
+                // Event listeners for hover
+                eventPoint.addEventListener('mouseover', () => {
+                    // Date display gets ONLY the date
+                    dateDisplay.textContent = event.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                    dateDisplay.classList.add('opacity-100');
+                });
+                eventPoint.addEventListener('mouseout', () => {
+                    dateDisplay.classList.remove('opacity-100');
+                });
+
+                timelineContentWrapper.appendChild(eventPoint); // Append to wrapper
+            });
+
+            // Add "Today" indicator line and point
+            const todayTimeMs = today.getTime();
+            let todayPositionPercentage = ((todayTimeMs - timelineStartMs) / totalTimelineRangeMs) * 100;
+            // Ensure today's marker is within 0-100% of the timeline
+            todayPositionPercentage = Math.max(0, Math.min(100, todayPositionPercentage));
+
+            // Position and show the today line
+            todayLine.style.left = `${todayPositionPercentage}%`;
+            todayLine.style.opacity = '0.5';
+
+            const todayPoint = document.createElement('div');
+            todayPoint.classList.add('event-point', 'today');
+            todayPoint.style.left = `${todayPositionPercentage}%`;
+
+            // Special hover for "Today" point
+            todayPoint.addEventListener('mouseover', () => {
+                dateDisplay.textContent = 'Today'; // "Today" point always shows "Today"
+                dateDisplay.classList.add('opacity-100');
+            });
+            todayPoint.addEventListener('mouseout', () => {
+                dateDisplay.classList.remove('opacity-100');
+            });
+
+            timelineContentWrapper.appendChild(todayPoint); // Append to wrapper
+        }
+
+        // Event listeners for filter buttons
+        filterAllBtn.addEventListener('click', () => {
+            currentFilter = 'all';
+            renderTimeline('filterChange'); // Pass 'filterChange' mode
+            activateButton(filterAllBtn);
+        });
+
+        filterPastYearBtn.addEventListener('click', () => {
+            currentFilter = 'pastYear';
+            renderTimeline('filterChange'); // Pass 'filterChange' mode
+            activateButton(filterPastYearBtn);
+        });
+
+        filterNextYearBtn.addEventListener('click', () => {
+            currentFilter = 'nextYear';
+            renderTimeline('filterChange'); // Pass 'filterChange' mode
+            activateButton(filterNextYearBtn);
+        });
+
+        // New event listeners for 24-month filters
+        filterPast24MonthsBtn.addEventListener('click', () => {
+            currentFilter = 'past24Months';
+            renderTimeline('filterChange'); // Pass 'filterChange' mode
+            activateButton(filterPast24MonthsBtn);
+        });
+
+        filterNext24MonthsBtn.addEventListener('click', () => {
+            currentFilter = 'next24Months';
+            renderTimeline('filterChange'); // Pass 'filterChange' mode
+            activateButton(filterNext24MonthsBtn);
+        });
+
+        // Function to activate the clicked button and deactivate others
+        function activateButton(activeButton) {
+            [filterAllBtn, filterPastYearBtn, filterNextYearBtn, filterPast24MonthsBtn, filterNext24MonthsBtn].forEach(btn => {
+                btn.classList.remove('active');
+            });
+            activeButton.classList.add('active');
+        }
+
+        // Setup zoom and pan listeners
+        function setupZoomPanListeners() {
+            // Wheel zoom
+            timelineContainer.addEventListener('wheel', (e) => {
+                e.preventDefault(); // Prevent page scrolling
+
+                const containerRect = timelineContainer.getBoundingClientRect();
+                const mouseX = e.clientX - containerRect.left; // Mouse position relative to container
+
+                // Calculate position on the *current* timelineContentWrapper
+                const scrollOffsetBefore = timelineContainer.scrollLeft;
+                const currentWrapperWidthBefore = timelineContentWrapper.offsetWidth; // Get width before zoom change
+                
+                // Avoid division by zero if width is 0 (shouldn't happen, but for safety)
+                const percentageOnWrapper = currentWrapperWidthBefore > 0 ? (mouseX + scrollOffsetBefore) / currentWrapperWidthBefore : 0;
+
+                if (e.deltaY < 0) {
+                    // Zoom in
+                    zoomFactor = Math.min(MAX_ZOOM, zoomFactor * (1 + ZOOM_STEP)); // Multiplicative zoom step
+                } else {
+                    // Zoom out, but not below calculatedMinZoom
+                    zoomFactor = Math.max(calculatedMinZoom, zoomFactor / (1 + ZOOM_STEP)); // Multiplicative zoom step, bounded by calculatedMinZoom
+                }
+
+                renderTimeline('manualZoom'); // Re-render with new zoom factor (this updates timelineContentWrapper.offsetWidth)
+
+                // Adjust scroll position to "zoom into" the mouse pointer
+                const newWrapperWidth = timelineContentWrapper.offsetWidth; // Get updated width
+                const newScrollOffset = percentageOnWrapper * newWrapperWidth - mouseX;
+                
+                timelineContainer.scrollLeft = newScrollOffset;
+            });
+
+            // Pan/Drag functionality
+            timelineContainer.addEventListener('mousedown', (e) => {
+                // Only start dragging if not clicking on a filter button (check if target is part of a filter button)
+                if (e.target.tagName === 'BUTTON' || e.target.closest('.filter-buttons')) {
+                    return; 
+                }
+
+                isDragging = true;
+                // Subtract offsetLeft to get mouse position relative to the container's scrollable content
+                startX = e.pageX - timelineContainer.offsetLeft;
+                scrollLeft = timelineContainer.scrollLeft;
+                timelineContainer.style.cursor = 'grabbing';
+            });
+
+            timelineContainer.addEventListener('mouseleave', () => {
+                if (isDragging) { // Only reset if dragging was active
+                    isDragging = false;
+                    timelineContainer.style.cursor = 'grab';
+                }
+            });
+
+            timelineContainer.addEventListener('mouseup', () => {
+                isDragging = false;
+                timelineContainer.style.cursor = 'grab';
+            });
+
+            timelineContainer.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const x = e.pageX - timelineContainer.offsetLeft;
+                const walk = (x - startX) * 1.5; // Adjust sensitivity for dragging
+                timelineContainer.scrollLeft = scrollLeft - walk;
+            });
+        }
+
+
+        // Initialize the application when the window loads
+        window.onload = function() {
+            fetchDataFromGoogleSheet();
+            setupZoomPanListeners(); // Setup zoom and pan after initial render
+        };
+    </script>
+</body>
+</html>
